@@ -5,6 +5,7 @@ import pygame,random,sys,time   #sys模块中的exit用于退出
 from pygame.locals import *
 from automative import DataGen, OperationSet
 import math
+from train_panel import TrainSystem
 
 ScreenWidth,ScreenHeight = 460,680
 
@@ -51,17 +52,19 @@ class Plane(object):
 #玩家飞机类，继承基类
 class Hero(Plane):
     """Hero"""
-    def __init__(self):
+    def __init__(self, img='Resources/hero.png', x = 200, y = 600):
         Plane.__init__(self)
-        planeImageName = 'Resources/hero.png'
+        planeImageName = img
         self.image = pygame.image.load(planeImageName).convert()
         #玩家原始位置
-        self.x = 200
-        self.y = 600
         self.width = 70
         self.height = 70
+        self.x = x 
+        self.y = y
         self.step_length = 25
         self.planeName = 'hero'
+
+
 
     def keepInBound(self):
         if self.x > ScreenWidth - self.width: self.x = ScreenWidth - self.width
@@ -94,10 +97,12 @@ class Hero(Plane):
         self.keepInBound()
         
 
+
+
 #定义敌人飞机类
 class Enemy(Plane):
     """docstring for Enemy"""
-    def __init__(self,speed):
+    def __init__(self,speed, x = random.randint(20, 400), y = 0):
         super(Enemy, self).__init__()
         randomImageNum = random.randint(1,3)
         planeImageName = 'Resources/enemy-' + str(randomImageNum) + '.png'
@@ -108,6 +113,7 @@ class Enemy(Plane):
         self.planeName = 'enemy'
         self.direction = 'down'     #用英文表示
         self.speed = speed          #移动速度,这个参数现在需要传入
+
 
     def move(self):
         if self.direction == 'down':
@@ -145,11 +151,13 @@ class GameInit(object):
         for i in cls.g_ememyList:
             i.draw(screen)   #画出敌机
             #敌机超过屏幕就从列表中删除
-            if i.y > 680:
+            if i.y > ScreenWidth:
                 delPlaneList.append(j)
             j += 1
+        delPlaneList.reverse()
         for m in delPlaneList:
-            del cls.g_ememyList[m]
+            if m < len(cls.g_ememyList):
+                del cls.g_ememyList[m]
 
 
         delBulletList = []
@@ -162,6 +170,7 @@ class GameInit(object):
                 delBulletList.append(j)
             j += 1
         #删除加入到delBulletList中的导弹索引,是同步的
+        delBulletList.reverse()
         for m in delBulletList:
             del cls.hero.bulletList[m]
     
@@ -223,6 +232,8 @@ class GameInit(object):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == K_RETURN:    #Enter按键
                         return
+                    elif event.key == K_t:
+                        return
 
     @staticmethod
     def terminate():
@@ -275,7 +286,6 @@ if __name__ == '__main__':
     gameStartIcon = pygame.image.load("Resources/Start.png")
     screen.blit(start,(0,0))
     pygame.display.update()       #开始显示启动图片，直到有Enter键按下才会开始
-    GameInit.waitForKeyPress()
     #记录游戏开始的时间
     startTime = time.time()
     #初始化
@@ -295,8 +305,61 @@ if __name__ == '__main__':
     mode = "HANDY"
     ops = OperationSet("input.in")
     datagen = DataGen("data.out")
-    cnt = 0
-    while True:
+
+    GameInit.waitForKeyPress()
+
+    trainsys = TrainSystem(ScreenWidth, ScreenHeight, 40, 70)
+
+    ## 开始绘制
+    testexit = False
+    while not testexit:
+        screen.blit(background,(0,0))    #不断覆盖，否则在背景上的图片会重叠
+        enemies = trainsys.genRandomPlanes(4)
+        GameInit.g_ememyList.clear()
+        for i in range(1, len(enemies)):
+            e = enemies[i]
+            GameInit.g_ememyList.append(Enemy(e[0], e[1]))
+
+        GameInit.hero.x, GameInit.hero.y = enemies[0][0], enemies[0][1]
+        print("hero loc", GameInit.hero.x, GameInit.hero.y)
+        GameInit.hero.draw(screen)
+        GameInit.draw(screen)
+        pygame.display.update()
+        
+        marked = False
+        handled = False
+        while not handled:
+            for event in pygame.event.get():
+                # print(event.type)
+                if event.type == pygame.QUIT:
+                    GameInit.terminate()
+                elif event.type == MOUSEBUTTONDOWN and not marked:
+                    ## start draw the target point and record it
+                    x, y = pygame.mouse.get_pos()
+                    print("start draw the target point and record it. Mark at ", x, y)
+                    # y = ScreenHeight - y
+                    # draw target
+                    target = Hero('Resources/hero.png', x, y)
+                    target.draw(screen)
+                    pygame.display.update()
+                    trainsys.recordBestLoc(enemies, x, y)
+                    marked = True
+                    # handled = True
+                    # break
+                elif event.type == KEYDOWN and event.key == K_q:
+                    print("Key q pressed")
+                    testexit = True
+                    handled = True
+                    break
+                elif event.type == KEYDOWN and event.key == K_n:
+                    print("key n pressed")
+                    handled = True
+                    break
+
+    GameInit.hero.x = 200
+    GameInit.hero.y = 600
+    trainsys.mprint()
+    while False:
         # print(math.floor(cnt / frame_rate))
         # cnt += 1
         screen.blit(background,(0,0))    #不断覆盖，否则在背景上的图片会重叠
