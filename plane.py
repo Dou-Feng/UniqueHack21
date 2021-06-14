@@ -6,6 +6,7 @@ from pygame.locals import *
 from automative import DataGen, OperationSet
 import math
 from train_panel import TrainSystem
+import numpy as np
 
 ScreenWidth,ScreenHeight = 460,680
 
@@ -301,8 +302,8 @@ if __name__ == '__main__':
     op_duration = 1 / op_rate
     last_op_time = startTime
     # mode 选择
-    # mode = "AUTO"
-    mode = "HANDY"
+    mode = "AUTO"
+    # mode = "HANDY"
     ops = OperationSet("input.in")
     datagen = DataGen("data.out")
 
@@ -315,7 +316,6 @@ if __name__ == '__main__':
     while not testexit:
         screen.blit(background,(0,0))    #不断覆盖，否则在背景上的图片会重叠
         enemies = trainsys.genRandomPlanes(4)
-        GameInit.g_ememyList.clear()
         for i in range(1, len(enemies)):
             e = enemies[i]
             GameInit.g_ememyList.append(Enemy(e[0], e[1]))
@@ -355,11 +355,12 @@ if __name__ == '__main__':
                     print("key n pressed")
                     handled = True
                     break
+        GameInit.g_ememyList.clear()
 
     GameInit.hero.x = 200
     GameInit.hero.y = 600
     trainsys.mprint()
-    while False:
+    while True:
         # print(math.floor(cnt / frame_rate))
         # cnt += 1
         screen.blit(background,(0,0))    #不断覆盖，否则在背景上的图片会重叠
@@ -369,8 +370,12 @@ if __name__ == '__main__':
         interval = cur_time - startTime
         if mode == "AUTO":
             if cur_time - last_op_time > op_duration:
-                op = ops.getnxt()
-                if op:
+                enemies = []
+                for e in GameInit.g_ememyList:
+                    enemies.append([e.x, e.y])
+                op = ops.getnxt(datagen.screenshot([GameInit.hero.x, GameInit.hero.y], enemies))[0]
+                print(op)
+                if op!=None:
                     print("op is ", op)
                     GameInit.hero.moveTowards(op[0], op[1])
                 # if op == 'L':
@@ -416,8 +421,8 @@ if __name__ == '__main__':
         if frame_duration <= cur_time - last_time:
             enemies = []
             for e in GameInit.g_ememyList:
-                enemies.append((e.x, e.y))
-            datagen.screenshot((GameInit.hero.x, GameInit.hero.y), enemies)
+                enemies.append([e.x, e.y])
+            datagen.screenshot([GameInit.hero.x, GameInit.hero.y], enemies)
             GameInit.shoot()
             GameInit.setXY()
             GameInit.draw(screen)    #描绘类的位置
